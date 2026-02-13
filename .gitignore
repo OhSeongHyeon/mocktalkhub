@@ -1,0 +1,33 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# =========================
+# Env / local secrets
+# =========================
+# .env.dev
+
+# =========================
+# OS / Editor artifacts
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*~
+
+# =========================
+# Logs / temp
+# =========================
+*.log
+tmp/
+
+# =========================
+# Local cloned repos (avoid committing full nested repos)
+# =========================
+backend/
+frontend/
