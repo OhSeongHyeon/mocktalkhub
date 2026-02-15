@@ -1,0 +1,13 @@
+# 개발 환경에서만 적용될 설정
+services:
+  backend:
+    env_file:
+      - ../../mocktalkback/.env.dev
+    # 개발 시 백엔드에 직접 접근이 필요할 경우를 대비해 포트 노출 (선택사항)
+    ports:
+      - "8082:8082"
+      - "8083:8083"
+
+  frontend:
+    env_file:
+      - ../../mocktalkfront/.env.development

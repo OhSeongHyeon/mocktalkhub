@@ -1,0 +1,29 @@
+# 로컬 cli 전용 컴포즈 파일
+# local-compose-test/docker-compose.yml          : Base
+# local-compose-test/docker-compose.prod.yml     : docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d (-f 옵션으로 prod용 설정 파일을 명시적으로 지정)
+# local-compose-test/docker-compose.override.yml : docker-compose up --build -d (docker-compose.override.yml이 자동으로 적용)
+
+services:
+  backend:
+    build:
+      context: ../../mocktalkback
+    container_name: mocktalk-back
+    networks:
+      - mocktalk-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../mocktalkfront
+    container_name: mocktalk-front
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+    networks:
+      - mocktalk-net
+    restart: unless-stopped
+
+networks:
+  mocktalk-net:
+    driver: bridge

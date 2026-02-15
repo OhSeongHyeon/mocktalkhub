@@ -1,0 +1,13 @@
+# 운영 환경에서만 적용될 설정
+services:
+  backend:
+    env_file:
+      - ../../mocktalkback/.env.prod
+    # 운영 환경에서는 Nginx를 통해서만 접근하므로 백엔드 포트를 노출하지 않음
+    ports:
+    # 매트릭 포트만 로컬 바인딩
+      - "127.0.0.1:8083:8083"
+
+  frontend:
+    env_file:
+      - ../../mocktalkfront/.env.production
