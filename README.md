@@ -3,8 +3,8 @@
 이 저장소는 **Mocktalk 프론트/백엔드 + 인프라 컨테이너**를 한 번에 실행하기 위한 허브입니다.
 
 포함 대상:
-- Frontend (`frontend`)
-- Backend (`backend`)
+- Frontend ([`frontend`](https://github.com/OhSeongHyeon/mocktalkfront))
+- Backend ([`backend`](https://github.com/OhSeongHyeon/mocktalkback))
 - PostgreSQL
 - Redis
 - MinIO
