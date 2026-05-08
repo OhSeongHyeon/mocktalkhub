@@ -1,0 +1,136 @@
+## 프로젝트 성격 / 대화 규칙
+
+- 민감 정보는 **저장·요구하지 않습니다**. 회원가입/프로필도 최소 정보만 사용합니다
+- 대화는 **한국어**로 진행합니다, 주석 및 독스트링은 한글로 작성합니다
+- 코드작업 이전에 작업계획과 작업순서를 알려주세요, 모든 작업은 시작하기전에 **승인** 허락을 받고 진행해야합니다
+
+## 작업 컨텍스트
+
+- 루트폴더 mocktalk-workspace 는 버전관리를 하지않음
+- Frontend: mocktalk-workspace/mocktalkfront
+- Backend: mocktalk-workspace/mocktalkback
+- 문서: mocktalk-workspace/mocktalkhub/mocktalkdocs
+
+## 인프라/배포 구조
+
+- **공통 사항**
+- Nginx 라우팅:
+  - `/` : Vue 정적 파일 서빙
+  - `/api` : Spring Backend로 Reverse Proxy
+- 매트릭 포트: 8083
+- **Supabase** (postgreSQL)
+- **Upstash** (redis)
+
+### Site (product & ops) - infra Structure
+
+- **OCI**
+- **OCI VM.Standard.E2.1.Micro (free plan)** (cloudflare tunnel, nginx(reverse proxy + Vue static), spring boot, docker)
+- **OCI Object Storage (free plan)**
+
+> 운영 도메인 www.mocktalk.site, SSL 적용된 HTTPS 환경, Cloudflare Tunnel 사용중
+
+## 기술 스택
+
+- Frontend: Vue, TypeScript, Tailwind CSS v4
+- Backend: Spring Boot, Spring Validation, Spring Security 6, Spring Data JPA, QueryDSL(openfeign), swagger, OAuth2, JWT, Lombok, JDK 21, PostgreSQL, Redis, Object Storage
+
+---
+
+## 보안/인증 정책
+
+### 토큰 정책
+
+- **Access Token**: `Authorization: Bearer <accessToken>` (프론트는 **메모리 저장 권장**, localStorage/sessionStorage 혼용 금지)
+- **Refresh Token**: **HttpOnly Cookie**로만 저장/전송 (JS에서 직접 접근 금지)
+- Refresh 쿠키는 가능하면 **Path를 refresh 엔드포인트로 제한**한다. 예: `/api/auth/refresh`
+
+### CSRF 방어(Refresh/Logout에만 적용)
+
+- Refresh/Logout처럼 **쿠키 기반으로 동작하는 민감 엔드포인트에만**
+  - `SameSite=Lax`
+  - **Origin allowlist 체크**
+- 모든 API에 무차별 적용하지 않는다(개발/Swagger 테스트 흐름을 불필요하게 깨지 않기 위함).
+
+---
+
+## 프론트엔드(Vue) 폴더 구조
+
+```
+src/
+├─ app/          # 앱 초기화(엔트리, 라우터 설정, 전역 설정)
+├─ pages/        # 라우트 단위 페이지
+├─ widgets/      # 여러 feature 조합 UI 블록
+├─ features/     # 사용자 액션 단위 기능
+├─ entities/     # 도메인 모델 단위
+└─ shared/       # 공통 UI, 공통 lib, 공통 http, config
+```
+
+## 프론트엔드 작업 규칙
+
+- 구조 원칙: `app -> pages -> widgets -> features -> entities -> shared` 의존 방향을 지킨다.
+- API 호출: 컴포넌트에서 직접 `fetch` 하지 않고 `features/*/api` 또는 `entities/*/api`를 통해 호출한다.
+- URL 관리: API Base URL 하드코딩 금지, `VITE_*`만 사용하며 운영 기본값은 `/api`를 권장한다.
+- 인증 처리: Access Bearer, Refresh HttpOnly Cookie를 사용하고 `401 -> refresh -> 실패 시 로그아웃` 흐름을 통일한다.
+- 타입 규칙: 백엔드 DTO 대응 타입을 프론트에 정의하고 타입 import는 `import type`을 사용한다.
+- 라우팅: 라우트/가드는 `app/router`에서 중앙 관리하고 페이지 컴포넌트는 `pages`에 둔다.
+- 상태 관리: 전역 상태는 `stores`로 제한하고 나머지는 feature/page 로컬 상태로 처리한다.
+- UI 규칙: Tailwind CSS v4 기준으로 작업하며 전역 토큰과 공통 스타일은 `src/style.css`를 기준으로 관리한다.
+- 공통 레이아웃: 새 페이지는 특별한 이유가 없으면 `AppShell + PageContainer`에서 시작하고, 상단은 `PageHeader` 또는 도메인 헤더 1개로 정리한다. 세부 기준은 `mocktalkdocs/front/page-layout-guideline.md`를 따른다.
+- 공통 UI 재사용: `ui-panel`, `ui-sub-panel`, `ui-data-panel`, `ui-toolbar`, `ui-list-row` 같은 공통 `ui-*` 계약을 우선 사용하고 동일 역할의 Tailwind 조합을 새로 중복 정의하지 않는다.
+- 접근성/기본 UI 규칙: Tailwind 유틸리티 우선, 버튼 `type` 명시, 아이콘 전용 버튼/링크는 `aria-label`을 필수로 한다.
+- 품질 게이트: 작업 완료 전 `npm run lint && npm run test && npm run build`를 통과한다.
+- 테스트 규칙: 테스트 작성/목킹 규칙은 `src/test/TESTING_GUIDE.md`를 따르고, 공통 레이아웃·테마·모달·메뉴 같은 전역 UI 상호작용을 변경할 때는 관련 테스트를 함께 추가하거나 수정한다.
+
+## 백엔드(Spring) 패키지 구조
+
+```
+com.mocktalkback/
+├── global/  # 모든 도메인에서 공통으로 사용하는 요소
+│   ├── auth/  # 인증/인가(JWT, OAuth2) 프레임워크 관련
+│   │   ├── jwt/
+│   │   └── oauth2/
+│   ├── common/  # 공통 응답(ApiResponse), 유틸리티 클래스
+│   ├── config/  # SecurityConfig, WebMvcConfig, JpaConfig, RedisConfig 등
+│   └── exception/  # 전역 예외 처리(GlobalExceptionHandler), 공통 예외 클래스
+│
+├── domain/  # 비즈니스 도메인별 패키지
+│   ├── user/
+│   │   ├── controller/  # HTTP 요청/응답 처리, DTO(Request/Response)
+│   │   ├── service/  # 핵심 비즈니스 로직, 트랜잭션 처리
+│   │   ├── entity/  # 순수 도메인 객체 (JPA @Entity 등)
+│   │   └── repository/  # 데이터 영속성 (JPA Repository, Querydsl 등)
+│   │
+│   ├── article/
+│   │   ├── controller/
+│   │   ├── service/
+│   │   ├── entity/
+│   │   └── repository/
+│   │
+│   └── file/
+│       └── ...
+│
+└── infra/  # 외부 시스템 연동 구현체
+    └── redis/ # Redis 연동 구현
+
+Flyway 테이블 스키마 관리
+src/main/resources/
+└── db/
+    └── migration/
+        ├── V1__init.sql
+        └── ...
+```
+
+## 백엔드 작업 규칙
+
+- OOP 기반, SOLID 준수
+- 타입추론 `var` 사용보단 명시타입을 지향하세요.
+- REST API(STATELESS). API 호출 URL은 `/api` 으로 시작.
+- DB 접속정보, 서버 IP/포트는 `.env` 적극 활용.
+- 프로파일: `dev`(개발), `prod`(운영)
+  - 프로파일 별 코드가 다르면 `@Profile("dev")`, `@Profile("prod")`로 분리.
+- JPA Entity/DB 규칙:
+  - 접두어 키워드: `tb_`(테이블), `ix_`(인덱스), `uq_`(유니크), `pk_`, `fk_`
+  - 테이블 매핑 시 접두어로 `tb_` 사용. 예: `tb_users`
+- Spring Security 6 사용중이니 deprecated 문법 사용 금지
+- 테스트 코드 작성 규칙: 테스트코드 메서드 위에 무엇을 테스트하는지 코멘트 작성, given, when, then 방식으로 테스트 코드를 작성한다.
+- 데이터 삭제 정책: SoftDeleteEntity를 상속 받은 엔티티(테이블 스키마 deleted_at)는 소프트 딜리트를 우선한다.
